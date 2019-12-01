@@ -3,7 +3,7 @@ using AdventOfCode
 
 input = readlines("data/2019/day_1.txt")
 
-fuel_needed(mass) = floor(Int64, mass / 3) - 2
+fuel_needed(mass) = mass ÷ 3 - 2
 
 function part_1(input)
     sum(fuel_needed.(parse.(Int64, input)))
