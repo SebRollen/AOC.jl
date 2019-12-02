@@ -1,8 +1,10 @@
 # This file is machine-generated - editing it directly is not advised
 
 [[AdventOfCode]]
-deps = ["Dates", "HTTP"]
-path = "../AdventOfCode.jl"
+deps = ["Dates", "HTTP", "JSON", "Mocking"]
+git-tree-sha1 = "52b9d9f587649909804569a4d4e8de48390288bc"
+repo-rev = "master"
+repo-url = "https://github.com/SebRollen/AdventOfCode.jl.git"
 uuid = "7ef4cfdd-3fec-4d8b-b242-bcc5161d01d5"
 version = "0.1.0"
 
@@ -39,6 +41,12 @@ version = "0.5.0"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
+[[JSON]]
+deps = ["Dates", "Mmap", "Parsers", "Unicode"]
+git-tree-sha1 = "b34d7cef7b337321e97d22242c3c2b91f476748e"
+uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+version = "0.21.0"
+
 [[Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
@@ -54,6 +62,20 @@ deps = ["BinaryProvider", "Dates", "Libdl", "Random", "Sockets"]
 git-tree-sha1 = "85f5947b53c8cfd53ccfa3f4abae31faa22c2181"
 uuid = "739be429-bea8-5141-9913-cc70e7f3736d"
 version = "0.7.0"
+
+[[Mmap]]
+uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+
+[[Mocking]]
+git-tree-sha1 = "bd2623f8b728af988d2afec53d611acb621f3bc4"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.7.0"
+
+[[Parsers]]
+deps = ["Dates", "Test"]
+git-tree-sha1 = "0139ba59ce9bc680e2925aec5b7db79065d60556"
+uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
+version = "0.3.10"
 
 [[Printf]]
 deps = ["Unicode"]
