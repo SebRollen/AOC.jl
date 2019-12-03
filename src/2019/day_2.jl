@@ -9,30 +9,37 @@ function process_input(input)
     OffsetArray(parse.(Int, split(input[1], ",")), -1)
 end
 
-struct OpCode
-    read
-    f
-end
+abstract type OpCode end
+struct ADD <: OpCode end
+struct MUL <: OpCode end
+struct END <: OpCode end
 
-const ADD = OpCode(3, (tape, x, y, z) -> tape[tape[z]] = tape[tape[x]] + tape[tape[y]])
-const MUL = OpCode(3, (tape, x, y, z) -> tape[tape[z]] = tape[tape[x]] * tape[tape[y]])
-const END = OpCode(0, identity)
+num_parameters(::ADD) = 3
+num_parameters(::MUL) = 3
+num_parameters(::END) = 0
+
+reduce_and_store(op, tape, x...) = tape[tape[x[3]]] = op(tape[tape[x[1]]], tape[tape[x[2]]])
+
+operation(::ADD, tape, params...) = reduce_and_store(+, tape, params...)
+operation(::MUL, tape, params...) = reduce_and_store(*, tape, params...)
+operation(::END, tape, params...) = tape[0]
 
 const OP_CODE_LOOKUP = Dict(
-    1  => ADD,
-    2  => MUL,
-    99 => END
+    1  => ADD(),
+    2  => MUL(),
+    99 => END()
 )
 
 function process_tape(tape)
     ptr = 0
     while true
         op = OP_CODE_LOOKUP[tape[ptr]]
-        if op == END
-            return tape[0]
+        n = num_parameters(op)
+        if op isa END
+            return operation(op, tape)
         end
-        op.f(tape, (ptr+1):(ptr+op.read)...)
-        ptr += op.read+1
+        operation(op, tape, (ptr+1):(ptr+n)...)
+        ptr += n+1
     end
 end
 
