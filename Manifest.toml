@@ -2,7 +2,7 @@
 
 [[AdventOfCode]]
 deps = ["Dates", "HTTP", "JSON", "Mocking"]
-git-tree-sha1 = "52b9d9f587649909804569a4d4e8de48390288bc"
+git-tree-sha1 = "43e56a30b398c38309733fd8c1e7890d826a4b2c"
 repo-rev = "master"
 repo-url = "https://github.com/SebRollen/AdventOfCode.jl.git"
 uuid = "7ef4cfdd-3fec-4d8b-b242-bcc5161d01d5"
