@@ -1,28 +1,21 @@
 # https://adventofcode.com/2019/day/2
-using AdventOfCode
+using AdventOfCode, OffsetArrays
 
 input = readlines("data/2019/day_2.txt")
 
+include("intcode_computer.jl")
+using .IntcodeComputers: process_tape
+
 function process_input(input)
-    parse.(Int, split(input[1], ","))
+    OffsetArray(parse.(Int, split(input[1], ",")), -1)
 end
 
 function part_1(input, noun, verb)
-    input = process_input(input)
-    input[2] = noun
-    input[3] = verb
-    for i in 1:4:length(input)
-        if input[i] == 99
-            return input[1]
-        elseif input[i] == 1
-            input[input[i+3]+1] = input[input[i+1]+1] + input[input[i+2]+1]
-        elseif input[i] == 2
-            input[input[i+3]+1] = input[input[i+1]+1] * input[input[i+2]+1]
-        else
-            error("Unexpected input")
-        end
-    end
-    error("Reached end of input with no return")
+    tape = process_input(input)
+    tape[1] = noun
+    tape[2] = verb
+    process_tape(tape, nothing, nothing)
+    return tape[0]
 end
 @info part_1(input, 12, 2)
 
