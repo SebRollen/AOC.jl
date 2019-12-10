@@ -2,7 +2,20 @@ module IntcodeComputers
 
 using OffsetArrays: OffsetArray
 
-export process_tape
+export IntcodeComputer, run_program!
+
+mutable struct IntcodeComputer
+    tape      :: OffsetArray{Int64,1,Array{Int64,1}}
+    ptr       :: Int
+    base      :: Int
+    inp       :: Channel{Int}
+    out       :: Channel{Int}
+    is_halted :: Bool
+end
+
+function IntcodeComputer(tape::Vector{Int}, inp, out)
+    IntcodeComputer(OffsetArray(tape, -1), 0, 0, inp, out, false)
+end
 
 abstract type OpCode end
 struct ADD <: OpCode end
@@ -25,72 +38,71 @@ num_parameters(::JEZ) = 2
 num_parameters(::LES) = 3
 num_parameters(::EQU) = 3
 num_parameters(::REL) = 1
-num_parameters(::END) = 0
 
 @enum Mode Position Immediate Relative
 
-function read_instruction(x)
-    ds = digits(x, pad = 5)
+function read_instruction(c)
+    instruction = c.tape[c.ptr]
+    ds = digits(instruction, pad = 5)
     op = ds[2]*10+ds[1]
     modes = Mode.(ds[3:5])
     (OP_CODE_LOOKUP[op], modes)
 end
 
-function access_tape(tape, pos)
+function access_tape!(tape, pos)
     if (pos+1) > length(tape)
         append!(tape, zeros(Int, pos-length(tape)+1))
     end
     tape[pos]
 end
 
-function write_tape(tape, pos, val)
+function write_tape!(tape, pos, val)
     if (pos+1) > length(tape)
         append!(tape, zeros(Int, pos-length(tape)+1))
     end
     tape[pos] = val
 end
 
-function read_tape(tape, val, mode, base)
+function read_tape!(tape, val, mode, base)
     if mode == Position
-        return access_tape(tape, access_tape(tape, val))
+        return access_tape!(tape, access_tape!(tape, val))
     elseif mode == Immediate
-        return access_tape(tape, val)
+        return access_tape!(tape, val)
     elseif mode == Relative
-        return access_tape(tape, base[] + access_tape(tape, val))
+        return access_tape!(tape, base + access_tape!(tape, val))
     else
         error("unexpected mode")
     end
 end
 
-function store_on_tape(tape, store_val, mode, base, read_val)
+function store_on_tape!(tape, store_val, mode, base, read_val)
     if mode == Position
-        write_tape(tape, access_tape(tape, store_val), read_val)
+        write_tape!(tape, access_tape!(tape, store_val), read_val)
     elseif mode == Immediate
         error("Cannot store in immediate mode!")
     elseif mode == Relative
-        write_tape(tape, base[] + access_tape(tape, store_val), read_val)
+        write_tape!(tape, base + access_tape!(tape, store_val), read_val)
     else
         error("unexpected mode")
     end
 end
 
-reduce_and_store(op, tape, ptr, base, modes) = store_on_tape(tape, ptr[]+3, modes[3], base, op(read_tape(tape, ptr[]+1, modes[1], base), read_tape(tape, ptr[]+2, modes[2], base)))
-jump_or_increment(op, tape, ptr, base, modes) = op(read_tape(tape, ptr[]+1, modes[1], base)) ? ptr[] = read_tape(tape, ptr[]+2, modes[2], base) : ptr[] += 3
+reduce_and_store!(op, c, modes) = store_on_tape!(c.tape, c.ptr+3, modes[3], c.base, op(read_tape!(c.tape, c.ptr+1, modes[1], c.base), read_tape!(c.tape, c.ptr+2, modes[2], c.base)))
+jump_or_increment!(op, c, modes) = op(read_tape!(c.tape, c.ptr+1, modes[1], c.base)) ? c.ptr = read_tape!(c.tape, c.ptr+2, modes[2], c.base) : c.ptr += 3
 
-operation(::ADD, tape, ptr, base, inp, out, modes) = reduce_and_store(+, tape, ptr, base, modes)
-operation(::MUL, tape, ptr, base, inp, out, modes) = reduce_and_store(*, tape, ptr, base, modes)
-operation(::INP, tape, ptr, base, inp, out, modes) = store_on_tape(tape, ptr[]+1, modes[1], base, take!(inp))
-operation(::OUT, tape, ptr, base, inp, out, modes) = push!(out, read_tape(tape, ptr[]+1, modes[1], base))
-operation(::JNZ, tape, ptr, base, inp, out, modes) = jump_or_increment(!=(0), tape, ptr, base, modes)
-operation(::JEZ, tape, ptr, base, inp, out, modes) = jump_or_increment(==(0), tape, ptr, base, modes)
-operation(::LES, tape, ptr, base, inp, out, modes) = reduce_and_store(<, tape, ptr, base, modes)
-operation(::EQU, tape, ptr, base, inp, out, modes) = reduce_and_store(==, tape, ptr, base, modes)
-operation(::REL, tape, ptr, base, inp, out, modes) = base[] += read_tape(tape, ptr[]+1, modes[1], base)
-operation(::END, tape, ptr, base, inp, out, modes) = tape[0]
+operation!(::ADD, c, modes) = reduce_and_store!(+, c, modes)
+operation!(::MUL, c, modes) = reduce_and_store!(*, c, modes)
+operation!(::INP, c, modes) = store_on_tape!(c.tape, c.ptr+1, modes[1], c.base, take!(c.inp))
+operation!(::OUT, c, modes) = push!(c.out, read_tape!(c.tape, c.ptr+1, modes[1], c.base))
+operation!(::JNZ, c, modes) = jump_or_increment!(!=(0), c, modes)
+operation!(::JEZ, c, modes) = jump_or_increment!(==(0), c, modes)
+operation!(::LES, c, modes) = reduce_and_store!(<, c, modes)
+operation!(::EQU, c, modes) = reduce_and_store!(==, c, modes)
+operation!(::REL, c, modes) = c.base += read_tape!(c.tape, c.ptr+1, modes[1], c.base)
+operation!(::END, c, modes) = c.is_halted = true
 
 increment_ptr(op::OpCode) = 1 + num_parameters(op)
-increment_ptr(op::JNZ) = 0
-increment_ptr(op::JEZ) = 0
+increment_ptr(op::Union{JNZ, JEZ, END}) = 0
 
 const OP_CODE_LOOKUP = Dict(
     1  => ADD(),
@@ -105,17 +117,11 @@ const OP_CODE_LOOKUP = Dict(
     99 => END()
 )
 
-function process_tape(tape, inp, out)
-    ptr = Ref(0)
-    base = Ref(0)
-    while true
-        op, modes = read_instruction(tape[ptr[]])
-        n = num_parameters(op)
-        if op isa END
-            break
-        end
-        operation(op, tape, ptr, base, inp, out, modes)
-        ptr[] += increment_ptr(op)
+function run_program!(c::IntcodeComputer)
+    while !c.is_halted
+        op, modes = read_instruction(c)
+        operation!(op, c, modes)
+        c.ptr += increment_ptr(op)
     end
 end
 
