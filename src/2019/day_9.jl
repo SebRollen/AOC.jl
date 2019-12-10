@@ -6,7 +6,6 @@ using .IntcodeComputers: IntcodeComputer, run_program!
 input = readlines("data/2019/day_9.txt")
 
 process_input(input) = parse.(Int, split(input[1], ","))
-
 function part_1(input)
     tape = process_input(input)
     inp, out = Channel{Int}(1), Channel{Int}(1)
