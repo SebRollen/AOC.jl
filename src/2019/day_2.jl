@@ -1,21 +1,20 @@
 # https://adventofcode.com/2019/day/2
-using AdventOfCode, OffsetArrays
+using AdventOfCode
 
 input = readlines("data/2019/day_2.txt")
 
 include("intcode_computer.jl")
-using .IntcodeComputers: process_tape
+using .IntcodeComputers: IntcodeComputer, run_program!
 
-function process_input(input)
-    OffsetArray(parse.(Int, split(input[1], ",")), -1)
-end
+process_input(input) = parse.(Int, split(input[1], ","))
 
 function part_1(input, noun, verb)
     tape = process_input(input)
-    tape[1] = noun
-    tape[2] = verb
-    process_tape(tape, nothing, nothing)
-    return tape[0]
+    tape[2] = noun
+    tape[3] = verb
+    c = IntcodeComputer(tape, Channel{Int}(), Channel{Int}())
+    run_program!(c)
+    return tape[1]
 end
 @info part_1(input, 12, 2)
 
