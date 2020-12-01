@@ -1,2 +1,2 @@
-# AOC.jl
+# AOC
 My solutions to AdventOfCode problems.
